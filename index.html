@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <title>白日放歌匹配器</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+        body {
+            background-color: #f5f7fa;
+            padding: 8px;
+        }
+        .password-error {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: #ff4444;
+            font-size: 14px;
+            font-weight: 500;
+            background: white;
+            padding: 10px 18px;
+            border-radius: 5px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            display: none;
+        }
+        .password-error button {
+            margin-top: 8px;
+            padding: 4px 12px;
+            border: none;
+            border-radius: 3px;
+            background: #0066ff;
+            color: white;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background 0.2s;
+        }
+        .password-error button:hover {
+            background: #0056d2;
+        }
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            display: none;
+        }
+        .input-wrapper {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+        .quick-input {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            width: 180px;
+        }
+        .input-header {
+            text-align: center;
+            font-size: 15px;
+            font-weight: bold;
+            padding: 5px 0;
+            border-radius: 4px 4px 0 0;
+            color: white;
+        }
+        .host-header {
+            background-color: #0066ff;
+        }
+        .guest-header {
+            background-color: #ff3333;
+        }
+        .num-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 3px;
+            border-radius: 0 0 4px 4px;
+            padding: 5px;
+            height: calc(6 * 35px + 10px);
+        }
+        .num-item {
+            text-align: center;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            height: 35px;
+            line-height: 35px;
+            border-radius: 3px;
+        }
+        .host-grid .num-item {
+            background-color: #0066ff;
+            color: white;
+        }
+        .guest-grid .num-item {
+            background-color: #ff3333;
+            color: white;
+        }
+        .num-item.active {
+            opacity: 0.8;
+            box-shadow: 0 0 3px rgba(0,0,0,0.2);
+        }
+        .host-grid .num-item:hover, .guest-grid .num-item:hover {
+            opacity: 0.9;
+        }
+        .host-grid .num-item:hover {
+            background-color: #0056d2;
+        }
+        .guest-grid .num-item:hover {
+            background-color: #e62e2e;
+        }
+        .control-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 5px;
+        }
+        .arrow-group {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .arrow-btn {
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+        .arrow-sm {
+            width: 32px;
+            height: 32px;
+            font-size: 14px;
+            background-color: #888;
+        }
+        .arrow-lg {
+            width: 38px;
+            height: 38px;
+            font-size: 16px;
+            font-weight: 900;
+            background-color: #555;
+        }
+        .reset-btn {
+            width: 38px;
+            height: 38px;
+            border: none;
+            border-radius: 50%;
+            background-color: #0066ff;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .arrow-btn:hover, .reset-btn:hover {
+            opacity: 0.8;
+        }
+        .match-section {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .section {
+            padding: 8px;
+            border-radius: 4px;
+            background: white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .section-header, .section-title {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 4px;
+            padding-bottom: 3px;
+            border-bottom: 1px solid #eee;
+        }
+        .section-header h3, .section-title h3, .history-section h3 {
+            font-size: 12px;
+            color: #333;
+            font-weight: normal;
+            margin: 0;
+        }
+        .title-text {
+            font-size: 10px;
+            color: #1d1d1f;
+            opacity: 0.05;
+            font-weight: 400;
+            line-height: 1;
+        }
+        .display-section {
+            overflow-y: auto;
+            font-size: 13px;
+            scroll-behavior: smooth;
+            padding: 2px 0;
+        }
+        #matchedContainer {
+            max-height: 100px;
+            padding: 2px 0;
+        }
+        .same-disk-item, .unmatched-item, .matched-item {
+            display: inline-block;
+            background: #f9f9f9;
+            border-radius: 2px;
+            white-space: nowrap;
+        }
+        .same-disk-item, .unmatched-item {
+            margin: 0 3px 3px 0;
+            padding: 3px 6px;
+            font-size: 13px;
+        }
+        #matchedContainer .matched-item {
+            font-size: 10px;
+            padding: 2px 3px;
+            margin: 0 1px 2px 0;
+        }
+        .host-value, .guest-value {
+            font-weight: 600;
+            font-size: 14px;
+        }
+        #matchedContainer .host-value, #matchedContainer .guest-value {
+            font-size: 11px;
+            font-weight: 500;
+        }
+        .host-value {
+            color: #0066ff;
+        }
+        .guest-value {
+            color: #ff3333;
+        }
+        .unmatched-wrap {
+            display: flex;
+            gap: 6px;
+        }
+        .unmatched-group {
+            flex: 1;
+        }
+        .unmatched-group h4 {
+            font-size: 11px;
+            color: #666;
+            margin-bottom: 3px;
+        }
+        .empty-tip {
+            color: #999;
+            font-size: 12px;
+            font-style: italic;
+            padding: 3px 0;
+        }
+        .history-section {
+            padding: 8px;
+            border-radius: 4px;
+            background: white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .history-list {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: wrap;
+            gap: 4px;
+            max-height: 80px;
+            overflow-y: auto;
+            font-size: 13px;
+            scroll-behavior: smooth;
+            padding: 2px 0;
+        }
+        .history-item {
+            padding: 4px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+        .history-item.host-item {
+            background: rgba(0,102,255,0.1);
+            color: #0066ff;
+        }
+        .history-item.guest-item {
+            background: rgba(255,51,51,0.1);
+            color: #ff3333;
+        }
+        .history-item:hover {
+            opacity: 0.9;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+        .footer-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 5px 0;
+        }
+        .clear-btn {
+            width: 72px;
+            height: 24px;
+            border: none;
+            border-radius: 2px;
+            background-color: #34c759;
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .clear-btn:hover {
+            background-color: #28a745;
+        }
+        .num-big {
+            font-size: 16px;
+            font-weight: bold;
+        }
+        .delete-tip {
+            font-size: 10px;
+            color: #888;
+            margin-left: 8px;
+            font-weight: normal;
+        }
+        ::-webkit-scrollbar {
+            width: 3px;
+            height: 3px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #ccc;
+            border-radius: 1.5px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f5f5f5;
+            border-radius: 1.5px;
+        }
+        /* 系统管理界面样式：默认隐藏，仅管理员可见 */
+        .admin-section {
+            max-width: 500px;
+            margin: 15px auto 0;
+            padding: 10px;
+            border-radius: 4px;
+            background: white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            display: none; /* 访客默认隐藏 */
+        }
+        .admin-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #eee;
+        }
+        .admin-header h3 {
+            font-size: 13px;
+            color: #333;
+            margin: 0;
+        }
+        .admin-form {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .admin-input {
+            flex: 1;
+            padding: 4px 6px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            font-size: 12px;
+            outline: none;
+        }
+        .admin-input:focus {
+            border-color: #0066ff;
+        }
+        .save-btn {
+            padding: 4px 10px;
+            border: none;
+            border-radius: 3px;
+            background-color: #0066ff;
+            color: white;
+            font-size: 12px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .save-btn:hover {
+            background-color: #0056d2;
+        }
+    </style>
+</head>
+<body>
+    <!-- 登录错误提示：已改为“请输入正确密码” -->
+    <div class="password-error" id="passwordError">
+        提示：请输入正确密码。<br>
+        <button onclick="checkPassword()">重新输入</button>
+    </div>
+    <div class="container" id="appContainer">
+        <div class="input-wrapper">
+            <div class="quick-input">
+                <div class="input-header host-header">主队</div>
+                <div class="num-grid host-grid" id="hostGrid"></div>
+            </div>
+            <div class="quick-input">
+                <div class="input-header guest-header">客队</div>
+                <div class="num-grid guest-grid" id="guestGrid"></div>
+            </div>
+        </div>
+        <div class="control-wrapper">
+            <div class="arrow-group">
+                <button class="arrow-btn arrow-sm" onclick="scrollNums('host', -6)">↑</button>
+                <button class="arrow-btn arrow-lg" onclick="scrollNums('host', -15)">↑</button>
+                <button class="arrow-btn arrow-lg" onclick="scrollNums('host', 15)">↓</button>
+                <button class="arrow-btn arrow-sm" onclick="scrollNums('host', 6)">↓</button>
+            </div>
+            <button class="reset-btn" onclick="resetNumPosition()">⟲</button>
+            <div class="arrow-group">
+                <button class="arrow-btn arrow-sm" onclick="scrollNums('guest', -6)">↑</button>
+                <button class="arrow-btn arrow-lg" onclick="scrollNums('guest', -15)">↑</button>
+                <button class="arrow-btn arrow-lg" onclick="scrollNums('guest', 15)">↓</button>
+                <button class="arrow-btn arrow-sm" onclick="scrollNums('guest', 6)">↓</button>
+            </div>
+        </div>
+        <div class="match-section">
+            <div class="section">
+                <div class="section-header">
+                    <h3 id="sameDiskCountTitle">同盘 <span class="num-big">0</span> 组</h3>
+                    <button class="clear-btn" onclick="clearAll()">清除所有</button>
+                </div>
+                <div class="display-section" id="sameDiskContainer">
+                    <div class="empty-tip">暂无同盘匹配</div>
+                </div>
+            </div>
+            <div class="section">
+                <div class="section-title">
+                    <h3 id="matchCountTitle">富贵洞 <span class="num-big">0</span> 组</h3>
+                    <span class="title-text">白日放歌匹配器</span>
+                </div>
+                <div class="display-section" id="matchedContainer">
+                    <div class="empty-tip">暂无富贵洞匹配</div>
+                </div>
+            </div>
+            <div class="section">
+                <div class="section-title">
+                    <h3 id="unmatchCountTitle">必胜边（主队边<span class="num-big">0</span> 客队边<span class="num-big">0</span>）</h3>
+                </div>
+                <div class="unmatched-wrap">
+                    <div class="unmatched-group">
+                        <h4>主队（蓝）</h4>
+                        <div id="unmatchedHost" class="display-section">
+                            <div class="empty-tip">暂无</div>
+                        </div>
+                    </div>
+                    <div class="unmatched-group">
+                        <h4>客队（红）</h4>
+                        <div id="unmatchedGuest" class="display-section">
+                            <div class="empty-tip">暂无</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="history-section">
+            <h3 id="inputCountTitle">已注入 <span class="num-big">0</span>（主<span class="num-big">0</span> 客<span class="num-big">0</span>）<span class="delete-tip">【点击删除】</span></h3>
+            <div class="history-list" id="historyList">
+                <div class="empty-tip">暂无</div>
+            </div>
+        </div>
+        <div class="footer-wrapper"></div>
+    </div>
+    <!-- 系统管理界面 -->
+    <div class="admin-section" id="adminSection">
+        <div class="admin-header">
+            <h3>系统管理（管理员权限）</h3>
+        </div>
+        <div class="admin-form">
+            <input type="text" class="admin-input" id="newAccessPassword" placeholder="请输入新的普通访问密码（当前：168168）">
+            <button class="save-btn" onclick="saveNewAccessPassword()">保存修改</button>
+        </div>
+    </div>
+
+    <script>
+        // 核心变量：区分管理员密码和普通访问密码，通过localStorage持久化普通密码
+        const ADMIN_PASSWORD = "18181818", // 固定管理员密码
+              INIT_ACCESS_PASSWORD = "168168", // 初始普通访问密码
+              MIN_NUM = -100.5,
+              MAX_NUM = 100.5,
+              NUM_COUNT = 18,
+              ACTIVE_INDEX = 8;
+        let currentHostMiddle = 0.5,
+            inputOrder = [],
+            // 从localStorage读取密码，无则用初始值（实现持久化）
+            currentAccessPassword = localStorage.getItem('daytimeMatchAccessPwd') || INIT_ACCESS_PASSWORD,
+            isAdmin = false; // 标记当前登录身份：true=管理员，false=普通用户
+
+        window.onload = checkPassword;
+
+        // 首页统一密码验证：提示已改为“请输入正确密码”
+        function checkPassword() {
+            // 登录弹窗提示：已简化为“请输入正确密码”
+            const inputPwd = prompt("请输入正确密码：", "");
+            // 验证管理员密码：显示基础功能 + 系统管理界面
+            if (inputPwd === ADMIN_PASSWORD) {
+                isAdmin = true;
+                document.getElementById("appContainer").style.display = "flex";
+                document.getElementById("adminSection").style.display = "block";
+                document.getElementById("passwordError").style.display = "none";
+                initApp();
+                alert("管理员登录成功，已显示系统管理界面！");
+            }
+            // 验证普通访问密码：仅显示基础功能
+            else if (inputPwd === currentAccessPassword) {
+                isAdmin = false;
+                document.getElementById("appContainer").style.display = "flex";
+                document.getElementById("adminSection").style.display = "none";
+                document.getElementById("passwordError").style.display = "none";
+                initApp();
+            }
+            // 密码错误：隐藏所有功能
+            else {
+                isAdmin = false;
+                document.getElementById("appContainer").style.display = "none";
+                document.getElementById("adminSection").style.display = "none";
+                document.getElementById("passwordError").style.display = "block";
+            }
+        }
+
+        // 管理员功能：保存新的普通访问密码（持久化到localStorage）
+        function saveNewAccessPassword() {
+            if (!isAdmin) {
+                alert("无管理员权限，无法修改访问密码！");
+                return;
+            }
+            const newPwd = document.getElementById("newAccessPassword").value.trim();
+            if (!newPwd) {
+                alert("新密码不能为空，请输入有效密码！");
+                return;
+            }
+            if (newPwd.length < 6) {
+                alert("建议密码长度不小于6位，提升安全性！");
+            }
+            // 更新密码并持久化到localStorage（刷新/关闭页面后仍生效）
+            currentAccessPassword = newPwd;
+            localStorage.setItem('daytimeMatchAccessPwd', newPwd);
+            // 更新输入框提示，显示当前最新密码
+            document.getElementById("newAccessPassword").placeholder = `请输入新的普通访问密码（当前：${newPwd}）`;
+            document.getElementById("newAccessPassword").value = "";
+            alert(`普通访问密码修改成功！新密码为：${currentAccessPassword}\n下次普通用户登录需使用新密码`);
+        }
+
+        // 初始化应用：更新数字网格和输入计数
+        function initApp() {
+            updateGrids();
+            updateInputCount();
+            // 初始化管理界面输入框提示，显示当前密码
+            if (isAdmin) {
+                document.getElementById("newAccessPassword").placeholder = `请输入新的普通访问密码（当前：${currentAccessPassword}）`;
+            }
+        }
+
+        // 更新数字网格（主队/客队数字生成）
+        function updateGrids() {
+            const hostDom = document.getElementById('hostGrid'),
+                  guestDom = document.getElementById('guestGrid');
+            hostDom.innerHTML = '';
+            guestDom.innerHTML = '';
+            const hostStart = currentHostMiddle - 8,
+                  hostNums = [];
+            for (let i = 0; i < NUM_COUNT; i++) hostNums.push(hostStart + i);
+            hostNums.forEach((num, idx) => {
+                hostDom.appendChild(createNumItem(num, 'host', idx === ACTIVE_INDEX));
+                guestDom.appendChild(createNumItem(-num, 'guest', idx === ACTIVE_INDEX));
+            });
+        }
+
+        // 创建数字按钮（处理数字显示格式）
+        function createNumItem(num, type, isActive) {
+            const item = document.createElement('div');
+            let displayText, signNum;
+            if (num === -0.5) {
+                displayText = '-0';
+                signNum = 0;
+            } else if (num === 0.5) {
+                displayText = '+0';
+                signNum = 0;
+            } else {
+                const displayInt = num > 0 ? Math.floor(num) : Math.ceil(num);
+                displayText = displayInt >= 0 ? `+${displayInt}` : `${displayInt}`;
+                signNum = Math.abs(displayInt);
+            }
+            item.className = `num-item ${isActive ? 'active' : ''}`;
+            item.textContent = displayText;
+            item.onclick = () => {
+                inputOrder.push({ 
+                    id: Date.now() + Math.random(),
+                    type, value: num, display: displayText,
+                    isNegative: num < 0, signNum
+                });
+                updateHistory();
+                updateInputCount();
+                rematch();
+            };
+            return item;
+        }
+
+        // 滚动数字（调整主队/客队数字范围）
+        window.scrollNums = function(type, step) {
+            let newHostMiddle = currentHostMiddle;
+            if (type === 'guest') newHostMiddle = -(-currentHostMiddle + step);
+            else newHostMiddle += step;
+            if (newHostMiddle > MAX_NUM) newHostMiddle = MIN_NUM;
+            if (newHostMiddle < MIN_NUM) newHostMiddle = MAX_NUM;
+            currentHostMiddle = newHostMiddle;
+            updateGrids();
+        };
+
+        // 重置数字位置（恢复初始数字显示）
+        window.resetNumPosition = function() {
+            currentHostMiddle = 0.5;
+            updateGrids();
+        };
+
+        // 更新历史记录（显示已输入的主队/客队数字）
+        function updateHistory() {
+            const historyDom = document.getElementById('historyList');
+            historyDom.innerHTML = '';
+            if (inputOrder.length === 0) {
+                historyDom.innerHTML = '<div class="empty-tip">暂无</div>';
+                return;
+            }
+            inputOrder.forEach((item, idx) => {
+                const historyItem = document.createElement('div');
+                historyItem.className = `history-item ${item.type}-item`;
+                historyItem.textContent = item.display;
+                historyItem.onclick = () => {
+                    inputOrder.splice(idx, 1);
+                    updateHistory();
+                    updateInputCount();
+                    rematch();
+                };
+                historyDom.appendChild(historyItem);
+            });
+            historyDom.scrollTop = historyDom.scrollHeight;
+        }
+
+        // 匹配逻辑（同盘/富贵洞/必胜边计算）
+        function rematch() {
+            const allHosts = inputOrder.filter(i => i.type === 'host'),
+                  allGuests = inputOrder.filter(i => i.type === 'guest');
+            const sameDiskPairs = [], normalPairs = [];
+            const usedGuestIds = new Set();
+            const sortedHosts = [...allHosts].sort((a, b) => a.value - b.value),
+                  sortedGuests = [...allGuests].sort((a, b) => a.value - b.value);
+            sortedHosts.forEach(host => {
+                for (const guest of sortedGuests) {
+                    if (usedGuestIds.has(guest.id) || (host.isNegative && guest.isNegative)) continue;
+                    const isOppositeSign = host.isNegative !== guest.isNegative,
+                          isSameSignNum = host.signNum === guest.signNum;
+                    const negativeSignNum = isOppositeSign ? (host.isNegative ? host.signNum : guest.signNum) : 0,
+                          positiveSignNum = isOppositeSign ? (host.isNegative ? guest.signNum : host.signNum) : host.signNum;
+                    if (isOppositeSign && isSameSignNum) {
+                        sameDiskPairs.push({ hostId: host.id, guestId: guest.id });
+                        usedGuestIds.add(guest.id);
+                        break;
+                    } else if ((isOppositeSign && !isSameSignNum && positiveSignNum > negativeSignNum) || (!isOppositeSign && !host.isNegative)) {
+                        normalPairs.push({ hostId: host.id, guestId: guest.id });
+                        usedGuestIds.add(guest.id);
+                        break;
+                    }
+                }
+            });
+            const unmatchedHostIds = [...sameDiskPairs.map(p => p.hostId), ...normalPairs.map(p => p.hostId)];
+            const unmatchedHosts = allHosts.filter(h => !unmatchedHostIds.includes(h.id)).sort((a, b) => b.value - a.value);
+            const unmatchedGuests = allGuests.filter(g => !usedGuestIds.has(g.id)).sort((a, b) => b.value - a.value);
+            updateMatchUnmatchCount(sameDiskPairs.length, normalPairs.length, unmatchedHosts.length, unmatchedGuests.length);
+            updateMatchDisplay(sameDiskPairs, 'sameDiskContainer', 'same-disk-item');
+            updateMatchDisplay(normalPairs, 'matchedContainer', 'matched-item');
+            updateUnmatchDisplay(unmatchedHosts, unmatchedGuests);
+        }
+
+        // 更新匹配结果显示（同盘/富贵洞）
+        function updateMatchDisplay(pairs, containerId, itemClass) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+            if (pairs.length === 0) {
+                container.innerHTML = `<div class="empty-tip">暂无${containerId === 'sameDiskContainer' ? '同盘' : '富贵洞'}匹配</div>`;
+                return;
+            }
+            pairs.forEach(pair => {
+                const host = inputOrder.find(h => h.id === pair.hostId),
+                      guest = inputOrder.find(g => g.id === pair.guestId);
+                const item = document.createElement('div');
+                item.innerHTML = `【<span class="host-value">${host.display}</span>↔<span class="guest-value">${guest.display}</span>】`;
+                item.className = itemClass;
+                container.appendChild(item);
+            });
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // 更新未匹配结果显示（必胜边）
+        function updateUnmatchDisplay(unmatchedHosts, unmatchedGuests) {
+            const [unHostDom, unGuestDom] = [
+                document.getElementById('unmatchedHost'),
+                document.getElementById('unmatchedGuest')
+            ];
+            unHostDom.innerHTML = '';
+            unGuestDom.innerHTML = '';
+            if (unmatchedHosts.length === 0) unHostDom.innerHTML = '<div class="empty-tip">暂无</div>';
+            else unmatchedHosts.forEach(host => {
+                const item = document.createElement('div');
+                item.className = 'unmatched-item';
+                item.innerHTML = `<span class="host-value">${host.display}</span>`;
+                unHostDom.appendChild(item);
+            });
+            if (unmatchedGuests.length === 0) unGuestDom.innerHTML = '<div class="empty-tip">暂无</div>';
+            else unmatchedGuests.forEach(guest => {
+                const item = document.createElement('div');
+                item.className = 'unmatched-item';
+                item.innerHTML = `<span class="guest-value">${guest.display}</span>`;
+                unGuestDom.appendChild(item);
+            });
+            unHostDom.scrollTop = unHostDom.scrollHeight;
+            unGuestDom.scrollTop = unGuestDom.scrollHeight;
+        }
+
+        // 更新匹配/未匹配计数（显示数量统计）
+        function updateMatchUnmatchCount(sameDiskCount, normalCount, unHostCount, unGuestCount) {
+            document.getElementById('sameDiskCountTitle').innerHTML = `同盘 <span class="num-big">${sameDiskCount}</span> 组`;
+            document.getElementById('matchCountTitle').innerHTML = `富贵洞 <span class="num-big">${normalCount}</span> 组`;
+            document.getElementById('unmatchCountTitle').innerHTML = `必胜边（主队边<span class="num-big">${unHostCount}</span> 客队边<span class="num-big">${unGuestCount}</span>）`;
+        }
+
+        // 更新输入计数（显示已注入数字总数）
+        function updateInputCount() {
+            const total = inputOrder.length,
+                  hostCount = inputOrder.filter(i => i.type === 'host').length,
+                  guestCount = inputOrder.filter(i => i.type === 'guest').length;
+            document.getElementById('inputCountTitle').innerHTML = 
+                `已注入 <span class="num-big">${total}</span>（主<span class="num-big">${hostCount}</span> 客<span class="num-big">${guestCount}</span>）<span class="delete-tip">【点击删除】</span>`;
+        }
+
+        // 清除所有数据（重置数字、历史记录、匹配结果）
+        window.clearAll = function() {
+            currentHostMiddle = 0.5;
+            inputOrder = [];
+            updateGrids();
+            updateHistory();
+            updateInputCount();
+            updateMatchUnmatchCount(0, 0, 0, 0);
+            updateMatchDisplay([], 'sameDiskContainer', 'same-disk-item');
+            updateMatchDisplay([], 'matchedContainer', 'matched-item');
+            updateUnmatchDisplay([], []);
+        };
+    </script>
+</body>
+</html>
