@@ -1,0 +1,1304 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <title>白日放歌匹配器</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: "Arial Rounded MT Bold", "Microsoft YaHei", sans-serif;
+            transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .container-outer {
+            width: 100vw;
+            max-width: 480px;
+            margin: 4px auto;
+            padding: 4px;
+            border: 2px solid;
+            border-image: linear-gradient(135deg, #0066ff 0%, #ff3333 100%) 1;
+            border-radius: 12px;
+            background: #f2f7f3;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+        }
+        body {
+            background: linear-gradient(120deg, #f0f4f8 0%, #e6edf5 100%);
+            background-attachment: fixed;
+            padding: 4px 0 8px;
+        }
+        .pwd-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+        }
+        .pwd-modal-content {
+            background: #fff;
+            padding: 16px;
+            border-radius: 8px;
+            box-shadow: 0 3px 12px rgba(0,0,0,0.12);
+            width: 90%;
+            max-width: 300px;
+            text-align: center;
+        }
+        .pwd-modal-content h3 {
+            font-size: 14px;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .pwd-input {
+            width: 100%;
+            padding: 7px 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            font-size: 13px;
+        }
+        .pwd-btn-group {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+        }
+        .pwd-btn {
+            padding: 6px 14px;
+            border: none;
+            border-radius: 4px;
+            font-size: 13px;
+            cursor: pointer;
+        }
+        .pwd-confirm {
+            background: #0066ff;
+            color: #fff;
+        }
+        .pwd-cancel {
+            background: #f5f5f5;
+            color: #666;
+        }
+        .password-error {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #fafafa;
+            padding: 8px 14px;
+            border-radius: 6px;
+            box-shadow: 0 3px 12px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.08);
+            border: 1px solid #ffebee;
+            color: #ff4444;
+            font-size: 12px;
+            text-align: center;
+            display: none;
+            z-index: 100;
+        }
+        .password-error button {
+            margin-top: 6px;
+            padding: 4px 12px;
+            border: none;
+            border-radius: 4px;
+            background: linear-gradient(135deg, #0066ff 0%, #0056d2 100%);
+            color: #fff;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .container {
+            width: 100%;
+            margin: 0 auto;
+            display: none;
+            flex-direction: column;
+            gap: 3px;
+            padding: 6px;
+            background: #fafafa;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .container::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, #0066ff 0%, #ff3333 100%);
+        }
+        .input-wrapper {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            margin-bottom: 2px;
+            position: relative;
+            z-index: 10;
+        }
+        .quick-input {
+            display: flex;
+            flex-direction: column;
+            width: calc(50% - 4px);
+            border-radius: 6px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+            background: #fefefe;
+            padding-bottom: 6px;
+        }
+        .input-header {
+            text-align: center;
+            font-size: 13px;
+            font-weight: 600;
+            padding: 4px 0;
+            color: #fff;
+            text-shadow: 0 1px 1px rgba(0,0,0,0.1);
+            position: relative;
+        }
+        .input-header::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 1px;
+            background: rgba(255,255,255,0.3);
+        }
+        .host-header { background: linear-gradient(135deg, #0066ff 0%, #0056d2 100%); }
+        .guest-header { background: linear-gradient(135deg, #ff3333 0%, #e62e2e 100%); }
+        .num-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2px;
+            padding: 3px 6px 8px;
+            height: auto;
+            min-height: calc(6 * 26px + 6px);
+            background: linear-gradient(0deg, #f5f5f5 0%, #fafafa 100%);
+            border-top: 1px solid #eee;
+        }
+        .num-item {
+            text-align: center;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            height: 26px;
+            line-height: 26px;
+            border-radius: 3px;
+            box-shadow: inset 0 1px 1px rgba(255,255,255,0.9), 0 1px 2px rgba(0,0,0,0.05);
+            color: #fff;
+            position: relative;
+            border: 1px solid transparent;
+        }
+        .num-item::after {
+            content: "";
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 50%;
+            height: 25%;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+            pointer-events: none;
+        }
+        .host-grid .num-item {
+            background: linear-gradient(145deg, #0066ff 0%, #0056d2 100%);
+            border-color: rgba(0,86,210,0.2);
+        }
+        .guest-grid .num-item {
+            background: linear-gradient(145deg, #ff3333 0%, #e62e2e 100%);
+            border-color: rgba(230,46,46,0.2);
+        }
+        .num-item.active {
+            opacity: 0.92;
+            box-shadow: inset 0 2px 3px rgba(0,0,0,0.15), 0 1px 1px rgba(0,0,0,0.05);
+            transform: scale(0.98);
+            border-color: rgba(0,0,0,0.1);
+        }
+        .control-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            margin-top: 0;
+            padding: 0;
+            position: relative;
+            z-index: 5;
+        }
+        .arrow-group { display: flex; gap: 4px; }
+        .arrow-btn, .clear-btn, .reset-btn, .history-btn, .save-btn {
+            border: none;
+            color: #fff;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 1px 3px rgba(52,199,89,0.2), inset 0 1px 1px rgba(255,255,255,0.3);
+            position: relative;
+        }
+        .arrow-btn {
+            width: 28px;
+            height: 28px;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            background: linear-gradient(145deg, #34c759 0%, #28a745 100%);
+        }
+        .reset-btn {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            background: linear-gradient(145deg, #2d9749 0%, #23783b 100%);
+        }
+        .clear-btn {
+            width: 65px;
+            height: 24px;
+            border-radius: 4px;
+            font-size: 11px;
+            background: linear-gradient(145deg, #2d9749 0%, #23783b 100%);
+        }
+        .history-btn, .save-btn {
+            width: 65px;
+            height: 24px;
+            border-radius: 4px;
+            font-size: 11px;
+            background: linear-gradient(145deg, #3fc35f 0%, #31b252 100%);
+        }
+        .arrow-btn::after, .clear-btn::after, .reset-btn::after, .history-btn::after, .save-btn::after {
+            content: "";
+            position: absolute;
+            top: 2px;
+            background: rgba(255,255,255,0.25);
+            pointer-events: none;
+        }
+        .arrow-btn::after, .clear-btn::after, .history-btn::after, .save-btn::after {
+            right: 2px;
+            width: 25%;
+            height: 25%;
+            border-radius: 50%;
+        }
+        .reset-btn::after {
+            left: 3px;
+            width: 35%;
+            height: 35%;
+            border-radius: 50%;
+        }
+        .match-section { display: flex; flex-direction: column; gap: 4px; margin-top: 2px; }
+        .section {
+            padding: 4px 6px;
+            border-radius: 6px;
+            background: #fefefe;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.05);
+            border: 1px solid #f0f0f0;
+            position: relative;
+        }
+        .section::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, #0066ff 0%, #ff3333 100%);
+            opacity: 0.6;
+        }
+        .history-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.3);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .history-modal-content {
+            background: #fff;
+            padding: 16px;
+            border-radius: 8px;
+            box-shadow: 0 3px 12px rgba(0,0,0,0.12);
+            width: 90%;
+            max-width: 350px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .history-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #eee;
+        }
+        .history-modal-header h3 {
+            font-size: 14px;
+            color: #333;
+            margin: 0;
+        }
+        .back-btn, .new-page-btn, .history-modal-close {
+            background: none;
+            border: none;
+            font-size: 14px;
+            color: #666;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+        .back-btn { background: #f5f5f5; margin-right: 8px; }
+        .new-page-btn { background: #f0f0f0; }
+        .saved-record-item {
+            padding: 8px 10px;
+            border-radius: 4px;
+            background: #fafafa;
+            margin-bottom: 8px;
+            border-left: 3px solid #34c759;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .saved-record-item:hover {
+            background: #f5f5f5;
+        }
+        .saved-record-info {
+            flex: 1;
+        }
+        .saved-record-name {
+            font-size: 13px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 2px;
+        }
+        .saved-record-time {
+            font-size: 11px;
+            color: #888;
+            margin-bottom: 4px;
+        }
+        .saved-record-count {
+            font-size: 12px;
+            color: #666;
+        }
+        .delete-record-btn {
+            background: none;
+            border: none;
+            color: #ff4444;
+            font-size: 16px;
+            cursor: pointer;
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+        .delete-record-btn:hover {
+            background: rgba(255,68,68,0.05);
+        }
+        .no-saved-record {
+            font-size: 12px;
+            color: #888;
+            text-align: center;
+            padding: 20px 0;
+        }
+        .action-btn-group {
+            display: flex;
+            gap: 6px;
+        }
+        .section-header, .section-title, .history-section h3 {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 3px;
+            padding: 2px 4px;
+            border-bottom: 1px solid #f0f0f0;
+            border-radius: 3px;
+            background: linear-gradient(180deg, #f9f9f9 0%, #f5f5f5 100%);
+            box-shadow: inset 0 1px 1px rgba(255,255,255,0.8), 0 1px 1px rgba(0,0,0,0.03);
+            white-space: nowrap;
+        }
+        .section-header h3, .section-title h3, .history-section h3 {
+            font-size: 11px;
+            color: #333;
+            font-weight: 600;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 1px 0;
+            text-shadow: 0 1px 1px rgba(255,255,255,0.9);
+            white-space: nowrap;
+        }
+        .section-header h3::before { content: "⦿"; color: #0066ff; font-size: 11px; text-shadow: 0 1px 1px rgba(0,102,255,0.2); }
+        #matchCount::before { content: "💰"; color: #ff3333; font-size: 11px; text-shadow: 0 1px 1px rgba(255,51,51,0.2); }
+        #unmatchCount::before { content: "✓"; color: #34c759; font-size: 11px; text-shadow: 0 1px 1px rgba(52,199,89,0.2); }
+        .history-section h3::before { content: "📝"; color: #888; font-size: 11px; text-shadow: 0 1px 1px rgba(136,136,136,0.2); }
+        .title-text {
+            font-size: 10px;
+            font-weight: 500;
+            background: linear-gradient(145deg, #777 0%, #fff 50%, #777 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            opacity: 0.7;
+            text-shadow: 0 0 1px rgba(0,0,0,0.2);
+        }
+        .display-section {
+            overflow-y: auto;
+            font-size: 11px;
+            padding: 2px 1px;
+            max-height: 70px;
+            background: linear-gradient(0deg, #f9f9f9 0%, #fff 100%);
+            border-radius: 3px;
+            box-shadow: inset 0 1px 1px rgba(0,0,0,0.02);
+        }
+        .same-disk-item, .matched-item, .unmatched-item {
+            display: inline-block;
+            margin: 0 1px 2px;
+            padding: 1px 3px;
+            border-radius: 3px;
+            font-size: 9px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05), inset 0 1px 1px rgba(255,255,255,0.7);
+            min-width: calc(25% - 3px);
+            text-align: center;
+            background: linear-gradient(145deg, #f9f9f9 0%, #f0f0f0 100%);
+        }
+        .unmatched-group:first-child .unmatched-item { background: rgba(0,102,255,0.05); }
+        .unmatched-group:last-child .unmatched-item { background: rgba(255,51,51,0.05); }
+        .host-value, .guest-value {
+            font-size: 10px !important;
+            font-weight: 600 !important;
+            display: inline-block;
+        }
+        .host-value { color: #0066ff; }
+        .guest-value { color: #ff3333; }
+        .unmatched-wrap { display: flex; justify-content: space-between; gap: 6px; }
+        .unmatched-group { 
+            width: calc(50% - 3px);
+            position: relative;
+        }
+        .unmatched-group h4 {
+            font-size: 10px;
+            color: #666;
+            margin-bottom: 2px;
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            padding: 1px 3px;
+            border-radius: 2px;
+            background: rgba(0,0,0,0.02);
+            box-shadow: inset 0 1px 1px rgba(255,255,255,0.5);
+        }
+        .unmatched-group h4::before {
+            content: "";
+            width: 3px;
+            height: 3px;
+            border-radius: 50%;
+        }
+        .unmatched-group:first-child h4::before { background: #0066ff; }
+        .unmatched-group:last-child h4::before { background: #ff3333; }
+        .empty-tip {
+            color: #888;
+            font-size: 11px;
+            font-style: italic;
+            padding: 6px 0;
+            text-align: center;
+            opacity: 0.8;
+            background: rgba(0,0,0,0.01);
+            border-radius: 3px;
+            margin: 1px;
+        }
+        .overflow-tip {
+            color: #ff3333;
+            font-size: 11px;
+            font-weight: 600;
+            text-align: center;
+            padding: 4px 0;
+            background: rgba(255,51,51,0.03);
+            border: 1px dashed #ffcccc;
+            border-radius: 3px;
+            margin: 1px;
+        }
+        .anti-hole-tip {
+            position: absolute;
+            top: 0;
+            right: 3px;
+            color: #fff;
+            background: #28a745;
+            font-size: 9px;
+            font-weight: 600;
+            padding: 1px 4px;
+            border-radius: 2px;
+            box-shadow: 0 1px 1px rgba(40,167,69,0.2);
+            display: none;
+        }
+        .hole-container {
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            font-size: 8px;
+            width: 100%;
+            white-space: nowrap;
+        }
+        .hole-label {
+            color: #333;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            white-space: nowrap;
+        }
+        .hole-label::before { content: "🟢"; font-size: 7px; }
+        .hole-number-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1px;
+            margin-left: auto;
+            max-width: calc(100% - 25px);
+            max-height: 40px;
+            height: auto;
+            align-content: center;
+        }
+        .hole-item {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 0.5px;
+            padding: 1px 1px;
+            border-radius: 2px;
+            background: #f5f5f5;
+            box-shadow: 0 1px 1px rgba(0,0,0,0.05), inset 0 1px 1px rgba(255,255,255,0.6);
+            border: 1px solid #eee;
+            width: 16px;
+            height: 14px;
+            text-align: center;
+        }
+        .hole-number { font-size: 8px; font-weight: 700; }
+        .hole-blue { color: #0052cc; }
+        .hole-green { color: #28a745; }
+        .hole-red { color: #e02424; }
+        .hole-count {
+            font-size: 5px;
+            color: #000;
+            font-weight: 600;
+            vertical-align: super;
+            margin-left: 0.3px;
+            background: rgba(0,0,0,0.05);
+            padding: 0 0.3px;
+            border-radius: 1px;
+        }
+        .history-section {
+            padding: 4px 6px;
+            border-radius: 6px;
+            background: #fefefe;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.05);
+            border: 1px solid #f0f0f0;
+            position: relative;
+            margin-top: 2px;
+        }
+        .history-section::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, #0066ff 0%, #ff3333 100%);
+            opacity: 0.6;
+        }
+        .history-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1px;
+            max-height: 55px;
+            overflow-y: auto;
+            font-size: 12px;
+            padding: 2px 1px;
+            background: #fafafa;
+            border-radius: 3px;
+            box-shadow: inset 0 1px 1px rgba(0,0,0,0.02);
+        }
+        .history-item {
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05), inset 0 1px 1px rgba(255,255,255,0.5);
+            min-width: calc(12.5% - 2px);
+            text-align: center;
+            margin: 0 0.5px 2px;
+        }
+        .history-item.host-item {
+            background: linear-gradient(145deg, rgba(0,102,255,0.1) 0%, rgba(0,86,210,0.1) 100%);
+            color: #0066ff;
+        }
+        .history-item.guest-item {
+            background: linear-gradient(145deg, rgba(255,51,51,0.1) 0%, rgba(230,46,46,0.1) 100%);
+            color: #ff3333;
+        }
+        .num-big {
+            font-size: 12px !important;
+            font-weight: 600 !important;
+            min-width: 16px;
+            display: inline-block;
+            text-align: center;
+            text-shadow: 0 1px 1px rgba(0,0,0,0.05);
+        }
+        .delete-tip {
+            font-size: 9px;
+            color: #888;
+            margin-left: 4px;
+            font-weight: normal;
+        }
+        .admin-section {
+            width: 100%;
+            max-width: 480px;
+            margin: 6px auto 0;
+            padding: 4px 6px;
+            border-radius: 6px;
+            background: #fefefe;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.05);
+            border: 1px solid #f0f0f0;
+            display: none;
+            position: relative;
+        }
+        .admin-section::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: #0066ff;
+        }
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 3px;
+            padding: 2px 4px;
+            border-bottom: 1px solid #f0f0f0;
+            border-radius: 3px;
+            background: linear-gradient(180deg, #f9f9f9 0%, #f5f5f5 100%);
+            box-shadow: inset 0 1px 1px rgba(255,255,255,0.8), 0 1px 1px rgba(0,0,0,0.03);
+        }
+        .admin-header h3 {
+            font-size: 12px;
+            color: #333;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 3px;
+        }
+        .admin-form { display: flex; gap: 6px; margin-top: 3px; }
+        .admin-input {
+            flex: 1;
+            padding: 4px 8px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            font-size: 11px;
+            outline: none;
+            background: #fafafa;
+        }
+        .admin-save-btn {
+            padding: 4px 10px;
+            border: none;
+            border-radius: 3px;
+            background: linear-gradient(135deg, #0066ff 0%, #0056d2 100%);
+            color: #fff;
+            font-size: 11px;
+            cursor: pointer;
+        }
+        ::-webkit-scrollbar { width: 2px; height: 2px; }
+        ::-webkit-scrollbar-track {
+            background: #f5f5f5;
+            border-radius: 1px;
+            box-shadow: inset 0 0 1px rgba(0,0,0,0.05);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, #ccc 0%, #bbb 100%);
+            border-radius: 2px;
+            box-shadow: inset 0 1px 1px rgba(0,0,0,0.12);
+        }
+        *:has(.num-grid) {
+            overflow: visible;
+            clip: auto;
+            height: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="pwd-modal" id="pwdModal">
+        <div class="pwd-modal-content">
+            <h3>请输入访问密码</h3>
+            <input type="password" class="pwd-input" id="pwdInput" placeholder="输入密码">
+            <div class="pwd-btn-group">
+                <button class="pwd-btn pwd-confirm" onclick="playSound();verifyPwd()">确认</button>
+                <button class="pwd-btn pwd-cancel" onclick="playSound();hidePwdModal()">取消</button>
+            </div>
+        </div>
+    </div>
+    <div class="history-modal" id="historyModal">
+        <div class="history-modal-content">
+            <div class="history-modal-header">
+                <h3>已保存的记录</h3>
+                <div>
+                    <button class="back-btn" onclick="playSound();backToPreHistoryState()">返回</button>
+                    <button class="new-page-btn" onclick="playSound();newEmptyPage()">新建空白页</button>
+                    <button class="history-modal-close" onclick="playSound();closeHistoryModal()">×</button>
+                </div>
+            </div>
+            <div id="savedRecordsContainer" class="saved-records-container">
+                <div class="no-saved-record">暂无保存的记录</div>
+            </div>
+        </div>
+    </div>
+    <div class="container-outer">
+        <div class="password-error" id="passwordError">
+            提示：请输入正确密码。<br>
+            <button onclick="playSound();showPwdModal()">重新输入</button>
+        </div>
+        <div class="container" id="appContainer">
+            <div class="input-wrapper">
+                <div class="quick-input">
+                    <div class="input-header host-header">主队</div>
+                    <div class="num-grid host-grid" id="hostGrid"></div>
+                </div>
+                <div class="quick-input">
+                    <div class="input-header guest-header">客队</div>
+                    <div class="num-grid guest-grid" id="guestGrid"></div>
+                </div>
+            </div>
+            <div class="control-wrapper">
+                <div class="arrow-group">
+                    <button class="arrow-btn" onclick="playSound();scrollNums('host', -6)">↑</button>
+                    <button class="arrow-btn" onclick="playSound();setCenter('host', '-')">-</button>
+                    <button class="arrow-btn" onclick="playSound();setCenter('host', '+')">+</button>
+                    <button class="arrow-btn" onclick="playSound();scrollNums('host', 6)">↓</button>
+                </div>
+                <button class="reset-btn" onclick="playSound();resetPos()">⟲</button>
+                <div class="arrow-group">
+                    <button class="arrow-btn" onclick="playSound();scrollNums('guest', -6)">↑</button>
+                    <button class="arrow-btn" onclick="playSound();setCenter('guest', '-')">-</button>
+                    <button class="arrow-btn" onclick="playSound();setCenter('guest', '+')">+</button>
+                    <button class="arrow-btn" onclick="playSound();scrollNums('guest', 6)">↓</button>
+                </div>
+            </div>
+            <div class="match-section">
+                <div class="section">
+                    <div class="section-header">
+                        <h3 id="sameDiskCount">同盘 <span class="num-big">0</span> 组</h3>
+                        <div class="action-btn-group">
+                            <button class="history-btn" onclick="playSound();openHistoryModal()">历史</button>
+                            <button class="save-btn" onclick="playSound();saveCurrentRecord()">保存</button>
+                            <button class="clear-btn" onclick="playSound();clearAll()">清除所有</button>
+                        </div>
+                    </div>
+                    <div class="display-section" id="sameDiskContainer">
+                        <div class="empty-tip">暂无同盘匹配</div>
+                    </div>
+                </div>
+                <div class="section">
+                    <div class="section-title">
+                        <h3 id="matchCount">富贵洞 <span class="num-big">0</span> 组</h3>
+                        <div id="holeContainer" class="hole-container">
+                            <span class="hole-label">洞：</span>
+                            <div class="hole-number-group" id="holeNumberGroup">
+                                <div class="empty-tip">暂无数据</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="display-section" id="matchedContainer">
+                        <div class="empty-tip">暂无富贵洞匹配</div>
+                    </div>
+                </div>
+                <div class="section">
+                    <div class="section-title">
+                        <h3 id="unmatchCount">必胜边（主队边<span class="num-big">0</span> 客队边<span class="num-big">0</span>）</h3>
+                        <span class="title-text">白日放歌匹配器</span>
+                    </div>
+                    <div class="unmatched-wrap">
+                        <div class="unmatched-group">
+                            <h4>主队（蓝）</h4>
+                            <div class="anti-hole-tip" id="antiHoleTip">反洞</div>
+                            <div class="display-section" id="unmatchedHost">
+                                <div class="empty-tip">暂无</div>
+                            </div>
+                        </div>
+                        <div class="unmatched-group">
+                            <h4>客队（红）</h4>
+                            <div class="display-section" id="unmatchedGuest">
+                                <div class="empty-tip">暂无</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="history-section">
+                <h3 id="inputCount">已注入 <span class="num-big">0</span>（主<span class="num-big">0</span> 客<span class="num-big">0</span>）<span class="delete-tip">【点击删除】</span></h3>
+                <div class="history-list" id="historyList">
+                    <div class="empty-tip">暂无</div>
+                </div>
+            </div>
+        </div>
+        <div class="admin-section" id="adminSection">
+            <div class="admin-header">
+                <h3>🔧 系统管理（管理员权限）</h3>
+            </div>
+            <div class="admin-form">
+                <input type="text" class="admin-input" id="newPwd" placeholder="请输入新的普通访问密码（当前：168168）">
+                <button class="admin-save-btn" onclick="playSound();savePwd()">保存修改</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        const CONFIG = {
+            ADMIN_PWD: "18181818",
+            INIT_PWD: "168168",
+            MIN_NUM: -120.5,
+            MAX_NUM: 120.5,
+            NUM_COUNT: 18,
+            ACTIVE_IDX: 8,
+            STEP: 15,
+            SAVED_RECORDS_KEY: 'daytimeMatchSavedRecords'
+        };
+        let audioContext = null;
+        let state = {
+            hostMiddle: 0.5,
+            inputOrder: [],
+            preHistoryInputOrder: [],
+            currentEditingRecordId: null,
+            accessPwd: localStorage.getItem('daytimeMatchPwd') || CONFIG.INIT_PWD,
+            isAdmin: false,
+            dir: { host: 'reset', guest: 'reset' },
+            step: { host: 0, guest: 0 },
+            savedRecords: []
+        };
+        window.onload = () => {
+            showPwdModal();
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            } catch (e) {
+                console.log('音效初始化失败');
+            }
+        };
+        function playSound() {
+            if (!audioContext) {
+                try {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                } catch (e) {
+                    return;
+                }
+            }
+            if (audioContext.state === 'suspended') audioContext.resume();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(330, audioContext.currentTime);
+            oscillator.frequency.exponentialRampToValueAtTime(800, audioContext.currentTime + 0.05);
+            gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.15);
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            oscillator.start();
+            oscillator.stop(audioContext.currentTime + 0.15);
+        }
+        function getNextRecordNum() {
+            const nums = state.savedRecords.map(r => {
+                const match = r.name.match(/^记录(\d+)$/);
+                return match ? parseInt(match[1]) : 0;
+            });
+            return nums.length === 0 ? 1 : Math.max(...nums) + 1;
+        }
+        function saveCurrentRecord() {
+            if (state.inputOrder.length === 0) {
+                alert('暂无输入记录，无法保存');
+                return;
+            }
+            const recordData = {
+                inputOrder: JSON.parse(JSON.stringify(state.inputOrder)),
+                count: state.inputOrder.length,
+                hostCount: state.inputOrder.filter(i => i.type === 'host').length,
+                guestCount: state.inputOrder.filter(i => i.type === 'guest').length,
+                time: new Date().toLocaleString()
+            };
+            if (state.currentEditingRecordId) {
+                const idx = state.savedRecords.findIndex(r => r.id === state.currentEditingRecordId);
+                if (idx !== -1) {
+                    state.savedRecords[idx] = { ...state.savedRecords[idx], ...recordData };
+                    alert(`已更新【${state.savedRecords[idx].name}】`);
+                }
+            } else {
+                const newRecord = {
+                    id: Date.now(),
+                    name: `记录${getNextRecordNum()}`,
+                    ...recordData
+                };
+                state.savedRecords.unshift(newRecord);
+                if (state.savedRecords.length > 10) state.savedRecords.pop();
+                alert(`已保存为【${newRecord.name}】`);
+            }
+            sortRecordsByName();
+            localStorage.setItem(CONFIG.SAVED_RECORDS_KEY, JSON.stringify(state.savedRecords));
+            updateSavedRecordsDisplay();
+            clearAll();
+        }
+        function deleteRecord(recordId) {
+            if (!confirm('确定要删除这条记录吗？删除后无法恢复')) return;
+            const idx = state.savedRecords.findIndex(r => r.id === recordId);
+            if (idx !== -1) {
+                const deletedName = state.savedRecords[idx].name;
+                state.savedRecords.splice(idx, 1);
+                if (state.currentEditingRecordId === recordId) {
+                    state.currentEditingRecordId = null;
+                    state.inputOrder = [];
+                    updateHistory();
+                    updateInputCount();
+                    rematch();
+                }
+                sortRecordsByName();
+                localStorage.setItem(CONFIG.SAVED_RECORDS_KEY, JSON.stringify(state.savedRecords));
+                updateSavedRecordsDisplay();
+                alert(`已删除【${deletedName}】`);
+            }
+        }
+        function sortRecordsByName() {
+            state.savedRecords.sort((a, b) => {
+                const numA = parseInt(a.name.match(/^记录(\d+)$/)[1]);
+                const numB = parseInt(b.name.match(/^记录(\d+)$/)[1]);
+                return numA - numB;
+            });
+        }
+        function openHistoryModal() {
+            state.preHistoryInputOrder = JSON.parse(JSON.stringify(state.inputOrder));
+            const hasUnsaved = state.inputOrder.length > 0 && !state.currentEditingRecordId;
+            if (hasUnsaved) {
+                const newRecord = {
+                    id: Date.now(),
+                    name: `记录${getNextRecordNum()}`,
+                    inputOrder: JSON.parse(JSON.stringify(state.inputOrder)),
+                    count: state.inputOrder.length,
+                    hostCount: state.inputOrder.filter(i => i.type === 'host').length,
+                    guestCount: state.inputOrder.filter(i => i.type === 'guest').length,
+                    time: new Date().toLocaleString()
+                };
+                state.savedRecords.unshift(newRecord);
+                if (state.savedRecords.length > 10) state.savedRecords.pop();
+                sortRecordsByName();
+                localStorage.setItem(CONFIG.SAVED_RECORDS_KEY, JSON.stringify(state.savedRecords));
+                alert(`当前未保存记录已自动保存为【${newRecord.name}】`);
+            }
+            updateSavedRecordsDisplay();
+            document.getElementById('historyModal').style.display = 'flex';
+        }
+        function closeHistoryModal() {
+            document.getElementById('historyModal').style.display = 'none';
+        }
+        function backToPreHistoryState() {
+            state.inputOrder = JSON.parse(JSON.stringify(state.preHistoryInputOrder));
+            state.currentEditingRecordId = null;
+            updateHistory();
+            updateInputCount();
+            rematch();
+            closeHistoryModal();
+        }
+        function newEmptyPage() {
+            state.preHistoryInputOrder = JSON.parse(JSON.stringify(state.inputOrder));
+            state.inputOrder = [];
+            state.currentEditingRecordId = null;
+            updateHistory();
+            updateInputCount();
+            rematch();
+            closeHistoryModal();
+        }
+        function updateSavedRecordsDisplay() {
+            const container = document.getElementById('savedRecordsContainer');
+            if (state.savedRecords.length === 0) {
+                container.innerHTML = '<div class="no-saved-record">暂无保存的记录</div>';
+                return;
+            }
+            container.innerHTML = state.savedRecords.map(record => `
+                <div class="saved-record-item">
+                    <div class="saved-record-info" onclick="loadSavedRecord(${record.id})">
+                        <div class="saved-record-name">${record.name}</div>
+                        <div class="saved-record-time">${record.time}</div>
+                        <div class="saved-record-count">
+                            共${record.count}条（主${record.hostCount}·客${record.guestCount}）
+                        </div>
+                    </div>
+                    <button class="delete-record-btn" onclick="playSound();deleteRecord(${record.id})">×</button>
+                </div>
+            `).join('');
+        }
+        function loadSavedRecord(recordId) {
+            const record = state.savedRecords.find(r => r.id === recordId);
+            if (!record) return;
+            state.inputOrder = JSON.parse(JSON.stringify(record.inputOrder));
+            state.currentEditingRecordId = recordId;
+            updateHistory();
+            updateInputCount();
+            rematch();
+            closeHistoryModal();
+        }
+        function showPwdModal() {
+            getEl('pwdModal').style.display = 'flex';
+            getEl('pwdInput').value = '';
+        }
+        function hidePwdModal() {
+            getEl('pwdModal').style.display = 'none';
+        }
+        function verifyPwd() {
+            const pwd = getEl('pwdInput').value.trim();
+            hidePwdModal();
+            if (pwd === CONFIG.ADMIN_PWD) {
+                state.isAdmin = true;
+                showEl(['appContainer', 'adminSection']);
+                getEl('newPwd').placeholder = `请输入新的普通访问密码（当前：${state.accessPwd}）`;
+                alert("管理员登录成功");
+            } else if (pwd === state.accessPwd) showEl(['appContainer']);
+            else showEl(['passwordError']);
+            initApp();
+        }
+        function savePwd() {
+            if (!state.isAdmin) return alert("无管理员权限");
+            const newPwd = getEl('newPwd').value.trim();
+            if (!newPwd) return alert("密码不能为空");
+            if (newPwd.length < 6) alert("建议密码≥6位");
+            state.accessPwd = newPwd;
+            localStorage.setItem('daytimeMatchPwd', newPwd);
+            getEl('newPwd').placeholder = `请输入新的普通访问密码（当前：${newPwd}）`;
+            getEl('newPwd').value = "";
+            alert(`密码修改成功：${newPwd}`);
+        }
+        function initApp() {
+            updateGrids();
+            updateInputCount();
+            updateSavedRecordsDisplay();
+        }
+        function updateGrids() {
+            const [hostDom, guestDom] = [getEl('hostGrid'), getEl('guestGrid')];
+            hostDom.innerHTML = guestDom.innerHTML = "";
+            const start = state.hostMiddle - 8;
+            for (let i = 0; i < CONFIG.NUM_COUNT; i++) {
+                const num = start + i;
+                const clampedNum = Math.max(CONFIG.MIN_NUM, Math.min(CONFIG.MAX_NUM, num));
+                hostDom.appendChild(createNumItem(clampedNum, 'host', i === CONFIG.ACTIVE_IDX));
+                guestDom.appendChild(createNumItem(-clampedNum, 'guest', i === CONFIG.ACTIVE_IDX));
+            }
+        }
+        function createNumItem(num, type, isActive) {
+            const item = document.createElement('div');
+            let display = num === -0.5 ? '-0' : num === 0.5 ? '+0' : (num > 0 ? `+${Math.floor(num)}` : Math.ceil(num));
+            item.className = `num-item ${isActive ? 'active' : ''}`;
+            item.textContent = display;
+            item.onclick = () => {
+                playSound();
+                state.inputOrder.push({
+                    id: Date.now() + Math.random(),
+                    type,
+                    value: num,
+                    display,
+                    isNegative: num < 0,
+                    signNum: Math.abs(num > 0 ? Math.floor(num) : Math.ceil(num))
+                });
+                updateHistory();
+                updateInputCount();
+                rematch();
+                getEl('historyList').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            };
+            return item;
+        }
+        function scrollNums(type, step) {
+            let newMiddle = state.hostMiddle;
+            newMiddle = type === 'guest' ? -(-newMiddle + step) : newMiddle + step;
+            newMiddle = Math.max(CONFIG.MIN_NUM, Math.min(CONFIG.MAX_NUM, newMiddle));
+            state.hostMiddle = newMiddle;
+            updateGrids();
+        }
+        function resetPos() {
+            state.hostMiddle = 0.5;
+            state.dir = { host: 'reset', guest: 'reset' };
+            state.step = { host: 0, guest: 0 };
+            updateGrids();
+        }
+        function setCenter(type, dir) {
+            let newStep = state.step[type];
+            if (state.dir[type] !== dir) newStep = dir === '+' ? 1 : -1;
+            else newStep = dir === '+' ? newStep + 1 : newStep - 1;
+            let offset = newStep * CONFIG.STEP;
+            offset = Math.max(-120, Math.min(120, offset));
+            state.step[type] = offset / CONFIG.STEP;
+            state.dir[type] = dir;
+            state.hostMiddle = type === 'guest' ? -offset : offset;
+            state.hostMiddle = Math.max(CONFIG.MIN_NUM, Math.min(CONFIG.MAX_NUM, state.hostMiddle));
+            updateGrids();
+        }
+        function updateHistory() {
+            const dom = getEl('historyList');
+            if (!state.inputOrder.length) return dom.innerHTML = '<div class="empty-tip">暂无</div>';
+            dom.innerHTML = "";
+            state.inputOrder.forEach((item, idx) => {
+                const el = document.createElement('div');
+                el.className = `history-item ${item.type}-item`;
+                el.textContent = item.display;
+                el.onclick = () => {
+                    playSound();
+                    state.inputOrder.splice(idx, 1);
+                    updateHistory();
+                    updateInputCount();
+                    rematch();
+                };
+                dom.appendChild(el);
+            });
+            dom.scrollTop = dom.scrollHeight;
+        }
+        function rematch() {
+            const [hosts, guests] = [
+                state.inputOrder.filter(i => i.type === 'host'),
+                state.inputOrder.filter(i => i.type === 'guest')
+            ];
+            const [sameDisk, normal] = [[], []];
+            const usedGuest = new Set();
+            const sortedHost = [...hosts].sort((a, b) => a.value - b.value);
+            const sortedGuest = [...guests].sort((a, b) => a.value - b.value);
+            sortedHost.forEach(host => {
+                for (const guest of sortedGuest) {
+                    if (usedGuest.has(guest.id) || (host.isNegative && guest.isNegative)) continue;
+                    const opposite = host.isNegative !== guest.isNegative;
+                    const sameNum = host.signNum === guest.signNum;
+                    if (opposite && sameNum) {
+                        sameDisk.push({ hostId: host.id, guestId: guest.id });
+                        usedGuest.add(guest.id);
+                        break;
+                    } else if ((opposite && !sameNum && (host.isNegative ? guest.signNum : host.signNum) > (host.isNegative ? host.signNum : guest.signNum)) || (!opposite && !host.isNegative)) {
+                        normal.push({ hostId: host.id, guestId: guest.id });
+                        usedGuest.add(guest.id);
+                        break;
+                    }
+                }
+            });
+            const sortedNormal = [...normal].sort((a, b) => {
+                const ha = getById(a.hostId), hb = getById(b.hostId);
+                return hb.value - ha.value;
+            });
+            const usedHostIds = [...sameDisk, ...normal].map(p => p.hostId);
+            const unmatchedHost = hosts.filter(h => !usedHostIds.includes(h.id)).sort((a, b) => b.value - a.value);
+            const unmatchedGuest = guests.filter(g => !usedGuest.has(g.id)).sort((a, b) => b.value - a.value);
+            const holeData = calcHole(sortedNormal);
+            const antiHoleTip = getEl('antiHoleTip');
+            antiHoleTip.style.display = (unmatchedHost.length >= 2 && unmatchedGuest.length >= 2) ? 'block' : 'none';
+            updateMatchCount(sameDisk.length, normal.length, unmatchedHost.length, unmatchedGuest.length);
+            updateMatchDisplay(sameDisk, 'sameDiskContainer', 'same-disk-item');
+            updateMatchDisplay(sortedNormal, 'matchedContainer', 'matched-item');
+            updateUnmatchDisplay(unmatchedHost, unmatchedGuest);
+            updateHoleDisplay(holeData);
+        }
+        function calcHole(pairs) {
+            const hole = [];
+            pairs.forEach(p => {
+                const [host, guest] = [getById(p.hostId), getById(p.guestId)];
+                const [hAbs, gAbs] = [host.signNum, guest.signNum];
+                if (!host.isNegative && !guest.isNegative) {
+                    for (let i = gAbs; i >= 1; i--) hole.push({ c: 'blue', v: i });
+                    hole.push({ c: 'green', v: 0 });
+                    for (let i = 1; i <= hAbs; i++) hole.push({ c: 'red', v: i });
+                } else if (host.isNegative && !guest.isNegative) {
+                    for (let i = gAbs; i >= hAbs + 1; i--) hole.push({ c: 'blue', v: i });
+                } else if (!host.isNegative && guest.isNegative) {
+                    for (let i = gAbs + 1; i <= hAbs; i++) hole.push({ c: 'red', v: i });
+                }
+            });
+            const count = {};
+            hole.forEach(item => {
+                const key = `${item.c}-${item.v}`;
+                count[key] = (count[key] || 0) + 1;
+            });
+            return Object.keys(count).map(key => {
+                const [c, v] = key.split('-');
+                return { color: c, value: +v, count: count[key] };
+            }).sort((a, b) => {
+                const colorOrder = { blue: 1, green: 2, red: 3 };
+                return a.color !== b.color ? colorOrder[a.color] - colorOrder[b.color] : (a.color === 'blue' ? b.value - a.value : a.value - b.value);
+            });
+        }
+        function updateHoleDisplay(data) {
+            const group = getEl('holeNumberGroup');
+            group.innerHTML = "";
+            const totalInput = state.inputOrder.length;
+            if (totalInput > 10 && data.length === 0) {
+                group.innerHTML = '<div class="overflow-tip">欸，欸，欸？我洞呢？？</div>';
+                return;
+            }
+            if (data.length > 24) {
+                group.innerHTML = '<div class="overflow-tip">这么多，庄麻了，都是你的了！！</div>';
+                return;
+            }
+            if (data.length === 0) {
+                group.innerHTML = '<div class="empty-tip">暂无数据</div>';
+                return;
+            }
+            const rowHeight = 14;
+            group.style.height = data.length <= 8 ? `${rowHeight}px` : data.length <= 16 ? `${rowHeight * 2}px` : `${rowHeight * 3}px`;
+            data.forEach(item => {
+                const el = document.createElement('span');
+                el.className = 'hole-item';
+                el.innerHTML = `<span class="hole-number hole-${item.color}">${item.value}</span>${item.count > 1 ? `<span class="hole-count">${item.count}</span>` : ''}`;
+                group.appendChild(el);
+            });
+        }
+        function updateMatchDisplay(pairs, containerId, cls) {
+            const dom = getEl(containerId);
+            dom.innerHTML = "";
+            if (!pairs.length) {
+                dom.innerHTML = `<div class="empty-tip">暂无${containerId === 'sameDiskContainer' ? '同盘' : '富贵洞'}匹配</div>`;
+                return;
+            }
+            pairs.forEach(p => {
+                const [host, guest] = [getById(p.hostId), getById(p.guestId)];
+                const el = document.createElement('div');
+                el.className = cls;
+                el.innerHTML = `【<span class="host-value">${host.display}</span>↔<span class="guest-value">${guest.display}</span>】`;
+                dom.appendChild(el);
+            });
+            dom.scrollTop = dom.scrollHeight;
+        }
+        function updateUnmatchDisplay(hosts, guests) {
+            const [hDom, gDom] = [getEl('unmatchedHost'), getEl('unmatchedGuest')];
+            hDom.innerHTML = hosts.length === 0 ? '<div class="empty-tip">暂无</div>' : hosts.map(h => `<div class="unmatched-item"><span class="host-value">${h.display}</span></div>`).join('');
+            gDom.innerHTML = guests.length === 0 ? '<div class="empty-tip">暂无</div>' : guests.map(g => `<div class="unmatched-item"><span class="guest-value">${g.display}</span></div>`).join('');
+            hDom.scrollTop = hDom.scrollHeight;
+            gDom.scrollTop = gDom.scrollHeight;
+        }
+        function updateMatchCount(same, normal, unHost, unGuest) {
+            getEl('sameDiskCount').innerHTML = `同盘 <span class="num-big">${same}</span> 组`;
+            getEl('matchCount').innerHTML = `富贵洞 <span class="num-big">${normal}</span> 组`;
+            getEl('unmatchCount').innerHTML = `必胜边（主队边<span class="num-big">${unHost}</span> 客队边<span class="num-big">${unGuest}</span>）`;
+        }
+        function updateInputCount() {
+            const total = state.inputOrder.length;
+            const hostCount = state.inputOrder.filter(i => i.type === 'host').length;
+            const guestCount = total - hostCount;
+            getEl('inputCount').innerHTML = `已注入 <span class="num-big">${total}</span>（主<span class="num-big">${hostCount}</span> 客<span class="num-big">${guestCount}</span>）<span class="delete-tip">【点击删除】</span>`;
+        }
+        function clearAll() {
+            state.hostMiddle = 0.5;
+            state.inputOrder = [];
+            state.currentEditingRecordId = null;
+            state.dir = { host: 'reset', guest: 'reset' };
+            state.step = { host: 0, guest: 0 };
+            getEl('antiHoleTip').style.display = 'none';
+            updateGrids();
+            updateHistory();
+            updateInputCount();
+            updateMatchCount(0, 0, 0, 0);
+            updateMatchDisplay([], 'sameDiskContainer', 'same-disk-item');
+            updateMatchDisplay([], 'matchedContainer', 'matched-item');
+            updateUnmatchDisplay([], []);
+            updateHoleDisplay([]);
+        }
+        function getEl(id) { return document.getElementById(id); }
+        function showEl(ids) { ids.forEach(id => getEl(id).style.display = id === 'appContainer' ? 'flex' : 'block'); }
+        function getById(id) { return state.inputOrder.find(i => i.id === id); }
+    </script>
+</body>
+</html>
